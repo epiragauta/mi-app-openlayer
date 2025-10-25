@@ -246,3 +246,65 @@ document.getElementById('check-municipios-wms').addEventListener('change', (e) =
 document.getElementById('check-departamentos-geojson').addEventListener('change', (e) => {
     dptosLayer.setVisible(e.target.checked);
 });
+
+// GetFeatureInfo para la capa de departamentos WMS
+const featureInfoText = document.getElementById('feature-info-text');
+
+map.on('singleclick', function(evt) {
+    // Solo hacer GetFeatureInfo si la capa de departamentos WMS está visible
+    if (!departamentosWMSLayer.getVisible()) {
+        return;
+    }
+
+    const viewResolution = map.getView().getResolution();
+    const source = departamentosWMSLayer.getSource();
+    const url = source.getFeatureInfoUrl(
+        evt.coordinate,
+        viewResolution,
+        'EPSG:3857',
+        {
+            'INFO_FORMAT': 'application/geo+json',
+            'FEATURE_COUNT': 1
+        }
+    );
+
+    if (url) {
+        fetch(url)
+            .then((response) => response.json())
+            .then((data) => {
+                if (data.features && data.features.length > 0) {
+                    const properties = data.features[0].properties;
+
+                    // Mostrar la información del departamento
+                    let infoText = '';
+
+                    if (properties.DPTO_CNMBR) {
+                        infoText = `Departamento: ${properties.DPTO_CNMBR}`;
+
+                        // Agregar código del departamento si está disponible
+                        if (properties.DPTO_CCDGO) {
+                            infoText += ` (Código: ${properties.DPTO_CCDGO})`;
+                        }
+
+                        // Agregar año de creación si está disponible
+                        if (properties.DPTO_NANO_) {
+                            infoText += ` | Creado: ${properties.DPTO_NANO_}`;
+                        }
+                    } else {
+                        // Fallback: mostrar todas las propiedades
+                        infoText = Object.keys(properties)
+                            .map(key => `${key}: ${properties[key]}`)
+                            .join(' | ');
+                    }
+
+                    featureInfoText.textContent = infoText;
+                } else {
+                    featureInfoText.textContent = 'No se encontró información en este punto';
+                }
+            })
+            .catch((error) => {
+                console.error('Error al obtener información:', error);
+                featureInfoText.textContent = 'Error al obtener información';
+            });
+    }
+});

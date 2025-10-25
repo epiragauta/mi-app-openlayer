@@ -13,25 +13,33 @@
     <div id="map"></div>
 
     <footer id="footer">
-        <button id="btn-mi-ubicacion" class="footer-btn">Mi Ubicación</button>
-        <button id="btn-colombia" class="footer-btn">Colombia</button>
-        <button id="btn-tunja" class="footer-btn">Tunja</button>
-        <button id="btn-sogamoso" class="footer-btn">Sogamoso</button>
-        <button id="btn-cocuy" class="footer-btn">Cocuy</button>
+        <div class="footer-section">
+            <button id="btn-mi-ubicacion" class="footer-btn">Mi Ubicación</button>
+            <button id="btn-colombia" class="footer-btn">Colombia</button>
+            <button id="btn-tunja" class="footer-btn">Tunja</button>
+            <button id="btn-sogamoso" class="footer-btn">Sogamoso</button>
+            <button id="btn-cocuy" class="footer-btn">Cocuy</button>
+        </div>
 
-        <div class="layer-controls">
-            <label class="layer-control">
-                <input type="checkbox" id="check-departamentos-wms" checked>
-                <span>Departamentos WMS</span>
-            </label>
-            <label class="layer-control">
-                <input type="checkbox" id="check-municipios-wms" checked>
-                <span>Municipios WMS</span>
-            </label>
-            <label class="layer-control">
-                <input type="checkbox" id="check-departamentos-geojson" checked>
-                <span>Departamentos GeoJSON</span>
-            </label>
+        <div class="footer-section">
+            <div class="layer-controls">
+                <label class="layer-control">
+                    <input type="checkbox" id="check-departamentos-wms" checked>
+                    <span>Departamentos WMS</span>
+                </label>
+                <label class="layer-control">
+                    <input type="checkbox" id="check-municipios-wms" checked>
+                    <span>Municipios WMS</span>
+                </label>
+                <label class="layer-control">
+                    <input type="checkbox" id="check-departamentos-geojson" checked>
+                    <span>Departamentos GeoJSON</span>
+                </label>
+            </div>
+        </div>
+
+        <div id="feature-info" class="feature-info">
+            <span id="feature-info-text">Haz clic en un departamento para ver información</span>
         </div>
     </footer>
 
