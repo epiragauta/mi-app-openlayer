@@ -247,64 +247,108 @@ document.getElementById('check-departamentos-geojson').addEventListener('change'
     dptosLayer.setVisible(e.target.checked);
 });
 
-// GetFeatureInfo para la capa de departamentos WMS
+// GetFeatureInfo para las capas WMS
 const featureInfoText = document.getElementById('feature-info-text');
 
 map.on('singleclick', function(evt) {
-    // Solo hacer GetFeatureInfo si la capa de departamentos WMS está visible
-    if (!departamentosWMSLayer.getVisible()) {
-        return;
+    const viewResolution = map.getView().getResolution();
+    const promises = [];
+    let infoTexts = [];
+
+    // Consultar capa de departamentos si está visible
+    if (departamentosWMSLayer.getVisible()) {
+        const dptosSource = departamentosWMSLayer.getSource();
+        const dptosUrl = dptosSource.getFeatureInfoUrl(
+            evt.coordinate,
+            viewResolution,
+            'EPSG:3857',
+            {
+                'INFO_FORMAT': 'application/geo+json',
+                'FEATURE_COUNT': 1
+            }
+        );
+
+        if (dptosUrl) {
+            promises.push(
+                fetch(dptosUrl)
+                    .then((response) => response.json())
+                    .then((data) => {
+                        if (data.features && data.features.length > 0) {
+                            const properties = data.features[0].properties;
+                            let text = '';
+
+                            if (properties.DPTO_CNMBR) {
+                                text = `Departamento: ${properties.DPTO_CNMBR}`;
+                                if (properties.DPTO_CCDGO) {
+                                    text += ` (Código: ${properties.DPTO_CCDGO})`;
+                                }
+                            }
+                            return text;
+                        }
+                        return null;
+                    })
+                    .catch(() => null)
+            );
+        }
     }
 
-    const viewResolution = map.getView().getResolution();
-    const source = departamentosWMSLayer.getSource();
-    const url = source.getFeatureInfoUrl(
-        evt.coordinate,
-        viewResolution,
-        'EPSG:3857',
-        {
-            'INFO_FORMAT': 'application/geo+json',
-            'FEATURE_COUNT': 1
+    // Consultar capa de municipios si está visible
+    if (municipiosWMSLayer.getVisible()) {
+        const mpiosSource = municipiosWMSLayer.getSource();
+        const mpiosUrl = mpiosSource.getFeatureInfoUrl(
+            evt.coordinate,
+            viewResolution,
+            'EPSG:3857',
+            {
+                'INFO_FORMAT': 'application/geo+json',
+                'FEATURE_COUNT': 1
+            }
+        );
+
+        if (mpiosUrl) {
+            promises.push(
+                fetch(mpiosUrl)
+                    .then((response) => response.json())
+                    .then((data) => {
+                        if (data.features && data.features.length > 0) {
+                            const properties = data.features[0].properties;
+                            let text = '';
+
+                            // Probar diferentes nombres de campos para municipios
+                            if (properties.MPIO_CNMBR) {
+                                text = `Municipio: ${properties.MPIO_CNMBR}`;
+                                if (properties.MPIO_CCDGO) {
+                                    text += ` (Código: ${properties.MPIO_CCDGO})`;
+                                }
+                            } else if (properties.MUNICIPIO) {
+                                text = `Municipio: ${properties.MUNICIPIO}`;
+                            } else {
+                                // Si no encontramos el campo esperado, mostrar todas las propiedades
+                                console.log('Propiedades Municipio:', properties);
+                                text = `Municipio: ${Object.keys(properties)
+                                    .map(key => `${key}: ${properties[key]}`)
+                                    .join(' | ')}`;
+                            }
+                            return text;
+                        }
+                        return null;
+                    })
+                    .catch(() => null)
+            );
         }
-    );
+    }
 
-    if (url) {
-        fetch(url)
-            .then((response) => response.json())
-            .then((data) => {
-                if (data.features && data.features.length > 0) {
-                    const properties = data.features[0].properties;
-
-                    // Mostrar la información del departamento
-                    let infoText = '';
-
-                    if (properties.DPTO_CNMBR) {
-                        infoText = `Departamento: ${properties.DPTO_CNMBR}`;
-
-                        // Agregar código del departamento si está disponible
-                        if (properties.DPTO_CCDGO) {
-                            infoText += ` (Código: ${properties.DPTO_CCDGO})`;
-                        }
-
-                        // Agregar año de creación si está disponible
-                        if (properties.DPTO_NANO_) {
-                            infoText += ` | Creado: ${properties.DPTO_NANO_}`;
-                        }
-                    } else {
-                        // Fallback: mostrar todas las propiedades
-                        infoText = Object.keys(properties)
-                            .map(key => `${key}: ${properties[key]}`)
-                            .join(' | ');
-                    }
-
-                    featureInfoText.textContent = infoText;
-                } else {
-                    featureInfoText.textContent = 'No se encontró información en este punto';
-                }
-            })
-            .catch((error) => {
-                console.error('Error al obtener información:', error);
-                featureInfoText.textContent = 'Error al obtener información';
-            });
+    // Procesar resultados
+    if (promises.length > 0) {
+        Promise.all(promises).then((results) => {
+            const validResults = results.filter(r => r !== null && r !== '');
+            if (validResults.length > 0) {
+                featureInfoText.textContent = validResults.join(' | ');
+            } else {
+                featureInfoText.textContent = 'No se encontró información en este punto';
+            }
+        });
+    } else {
+        featureInfoText.textContent = 'Activa al menos una capa WMS para consultar información';
     }
 });
