@@ -4,6 +4,7 @@ import View from 'ol/View.js';
 import TileLayer from 'ol/layer/Tile.js';
 import VectorLayer from 'ol/layer/Vector.js';
 import OSM from 'ol/source/OSM.js';
+import TileWMS from 'ol/source/TileWMS.js';
 import VectorSource from 'ol/source/Vector.js';
 import GeoJSON from 'ol/format/GeoJSON.js';
 import { fromLonLat } from 'ol/proj.js';
@@ -30,7 +31,7 @@ const dptosLayer = new VectorLayer({
     source: dptosSource,
     style: function(feature) {
         const nombre = feature.get('dpto_cnmbr');
-        console.log('Nombre departamento:', nombre);
+        //console.log('Nombre departamento:', nombre);
         return new Style({
             stroke: new Stroke({
                 color: '#837b7bff',
@@ -56,12 +57,32 @@ const dptosLayer = new VectorLayer({
     }
 });
 
+// Capas WMS de DANE
+const wmsUrl = 'https://portalgis.dane.gov.co/mparcgis/services/NIVEL_DE_REFERENCIA_DE_VEREDAS/Serv_CapasNivelReferenciaVeredas_2024/MapServer/WMSServer';
+
+// Capa de Departamentos desde WMS (Capa 3)
+const departamentosWMSLayer = new TileLayer({
+    source: new TileWMS({
+        url: wmsUrl,
+        params: {
+            'LAYERS': '3',
+            'TILED': true,
+            'VERSION': '1.3.0'
+        },
+        serverType: 'geoserver',
+        crossOrigin: 'anonymous'
+    }),
+    visible: true,
+    opacity: 0.7
+});
+
 const map = new Map({
     target: 'map',
     layers: [
         new TileLayer({
             source: new OSM()
         }),
+        departamentosWMSLayer,        
         dptosLayer
     ],
     view: new View({
@@ -194,4 +215,13 @@ document.getElementById('btn-mi-ubicacion').addEventListener('click', () => {
     } else {
         alert('La geolocalización no está disponible en tu navegador.');
     }
+});
+
+// Control de visibilidad de capas
+document.getElementById('check-departamentos-wms').addEventListener('change', (e) => {
+    departamentosWMSLayer.setVisible(e.target.checked);
+});
+
+document.getElementById('check-departamentos-geojson').addEventListener('change', (e) => {
+    dptosLayer.setVisible(e.target.checked);
 });
