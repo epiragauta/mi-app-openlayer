@@ -252,8 +252,35 @@ const featureInfoText = document.getElementById('feature-info-text');
 
 map.on('singleclick', function(evt) {
     const viewResolution = map.getView().getResolution();
-    const promises = [];
-    let infoTexts = [];
+
+    // Objeto para almacenar los resultados
+    const resultados = {
+        departamento: '',
+        municipio: ''
+    };
+
+    // Contador para saber cuántas consultas se completaron
+    let consultasCompletadas = 0;
+    let totalConsultas = 0;
+
+    // Función para actualizar el footer cuando todas las consultas terminen
+    function actualizarFooter() {
+        const textos = [];
+
+        if (resultados.departamento) {
+            textos.push(resultados.departamento);
+        }
+
+        if (resultados.municipio) {
+            textos.push(resultados.municipio);
+        }
+
+        if (textos.length > 0) {
+            featureInfoText.textContent = textos.join(' | ');
+        } else {
+            featureInfoText.textContent = 'No se encontró información en este punto';
+        }
+    }
 
     // Consultar capa de departamentos si está visible
     if (departamentosWMSLayer.getVisible()) {
@@ -269,26 +296,35 @@ map.on('singleclick', function(evt) {
         );
 
         if (dptosUrl) {
-            promises.push(
-                fetch(dptosUrl)
-                    .then((response) => response.json())
-                    .then((data) => {
-                        if (data.features && data.features.length > 0) {
-                            const properties = data.features[0].properties;
-                            let text = '';
+            totalConsultas++;
+            fetch(dptosUrl)
+                .then(function(response) {
+                    return response.json();
+                })
+                .then(function(data) {
+                    if (data.features && data.features.length > 0) {
+                        const properties = data.features[0].properties;
 
-                            if (properties.DPTO_CNMBR) {
-                                text = `Departamento: ${properties.DPTO_CNMBR}`;
-                                if (properties.DPTO_CCDGO) {
-                                    text += ` (Código: ${properties.DPTO_CCDGO})`;
-                                }
+                        if (properties.DPTO_CNMBR) {
+                            resultados.departamento = `Departamento: ${properties.DPTO_CNMBR}`;
+                            if (properties.DPTO_CCDGO) {
+                                resultados.departamento += ` (Código: ${properties.DPTO_CCDGO})`;
                             }
-                            return text;
                         }
-                        return null;
-                    })
-                    .catch(() => null)
-            );
+                    }
+
+                    consultasCompletadas++;
+                    if (consultasCompletadas === totalConsultas) {
+                        actualizarFooter();
+                    }
+                })
+                .catch(function(error) {
+                    console.error('Error al consultar departamentos:', error);
+                    consultasCompletadas++;
+                    if (consultasCompletadas === totalConsultas) {
+                        actualizarFooter();
+                    }
+                });
         }
     }
 
@@ -306,49 +342,51 @@ map.on('singleclick', function(evt) {
         );
 
         if (mpiosUrl) {
-            promises.push(
-                fetch(mpiosUrl)
-                    .then((response) => response.json())
-                    .then((data) => {
-                        if (data.features && data.features.length > 0) {
-                            const properties = data.features[0].properties;
-                            let text = '';
+            totalConsultas++;
+            fetch(mpiosUrl)
+                .then(function(response) {
+                    return response.json();
+                })
+                .then(function(data) {
+                    if (data.features && data.features.length > 0) {
+                        const properties = data.features[0].properties;
 
-                            // Probar diferentes nombres de campos para municipios
-                            if (properties.MPIO_CNMBR) {
-                                text = `Municipio: ${properties.MPIO_CNMBR}`;
-                                if (properties.MPIO_CCDGO) {
-                                    text += ` (Código: ${properties.MPIO_CCDGO})`;
-                                }
-                            } else if (properties.MUNICIPIO) {
-                                text = `Municipio: ${properties.MUNICIPIO}`;
-                            } else {
-                                // Si no encontramos el campo esperado, mostrar todas las propiedades
-                                console.log('Propiedades Municipio:', properties);
-                                text = `Municipio: ${Object.keys(properties)
-                                    .map(key => `${key}: ${properties[key]}`)
-                                    .join(' | ')}`;
+                        // Probar diferentes nombres de campos para municipios
+                        if (properties.MPIO_CNMBR) {
+                            resultados.municipio = `Municipio: ${properties.MPIO_CNMBR}`;
+                            if (properties.MPIO_CCDGO) {
+                                resultados.municipio += ` (Código: ${properties.MPIO_CCDGO})`;
                             }
-                            return text;
+                        } else if (properties.MUNICIPIO) {
+                            resultados.municipio = `Municipio: ${properties.MUNICIPIO}`;
+                        } else {
+                            // Si no encontramos el campo esperado, mostrar todas las propiedades
+                            console.log('Propiedades Municipio:', properties);
+                            resultados.municipio = `Municipio: ${Object.keys(properties)
+                                .map(function(key) {
+                                    return key + ': ' + properties[key];
+                                })
+                                .join(' | ')}`;
                         }
-                        return null;
-                    })
-                    .catch(() => null)
-            );
+                    }
+
+                    consultasCompletadas++;
+                    if (consultasCompletadas === totalConsultas) {
+                        actualizarFooter();
+                    }
+                })
+                .catch(function(error) {
+                    console.error('Error al consultar municipios:', error);
+                    consultasCompletadas++;
+                    if (consultasCompletadas === totalConsultas) {
+                        actualizarFooter();
+                    }
+                });
         }
     }
 
-    // Procesar resultados
-    if (promises.length > 0) {
-        Promise.all(promises).then((results) => {
-            const validResults = results.filter(r => r !== null && r !== '');
-            if (validResults.length > 0) {
-                featureInfoText.textContent = validResults.join(' | ');
-            } else {
-                featureInfoText.textContent = 'No se encontró información en este punto';
-            }
-        });
-    } else {
+    // Si no hay capas activas
+    if (totalConsultas === 0) {
         featureInfoText.textContent = 'Activa al menos una capa WMS para consultar información';
     }
 });
