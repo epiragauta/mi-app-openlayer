@@ -7,7 +7,7 @@ import OSM from 'ol/source/OSM.js';
 import VectorSource from 'ol/source/Vector.js';
 import GeoJSON from 'ol/format/GeoJSON.js';
 import { fromLonLat } from 'ol/proj.js';
-import { Fill, Stroke, Style } from 'ol/style.js';
+import { Fill, Stroke, Style, Text } from 'ol/style.js';
 import { register } from 'ol/proj/proj4.js';
 import proj4 from 'proj4';
 
@@ -26,15 +26,32 @@ const dptosSource = new VectorSource({
 
 const dptosLayer = new VectorLayer({
     source: dptosSource,
-    style: new Style({
-        stroke: new Stroke({
-            color: '#FF0000',
-            width: 3
-        }),
-        fill: new Fill({
-            color: 'rgba(255, 0, 0, 0.3)'
-        })
-    })
+    style: function(feature) {
+        const nombre = feature.get('dpto_cnmbr');
+        console.log('Nombre departamento:', nombre);
+        return new Style({
+            stroke: new Stroke({
+                color: '#FF0000',
+                width: 2
+            }),
+            fill: new Fill({
+                color: 'rgba(255, 0, 0, 0.2)'
+            }),
+            text: new Text({
+                text: nombre || '',
+                font: 'bold 18px Arial',
+                fill: new Fill({
+                    color: '#FFFFFF'
+                }),
+                stroke: new Stroke({
+                    color: '#000000',
+                    width: 4
+                }),
+                overflow: true,
+                offsetY: 0
+            })
+        });
+    }
 });
 
 const map = new Map({
@@ -54,9 +71,17 @@ const map = new Map({
 // Ajustar la vista cuando se carguen las features
 dptosSource.once('change', function() {
     if (dptosSource.getState() === 'ready') {
+        const features = dptosSource.getFeatures();
         const extent = dptosSource.getExtent();
-        console.log('Features cargadas:', dptosSource.getFeatures().length);
+        console.log('Features cargadas:', features.length);
         console.log('Extent:', extent);
+
+        // Verificar propiedades de la primera feature
+        if (features.length > 0) {
+            console.log('Propiedades de la primera feature:', features[0].getProperties());
+            console.log('Nombre del primer departamento:', features[0].get('dpto_cnmbr'));
+        }
+
         map.getView().fit(extent, {
             padding: [50, 50, 50, 50],
             duration: 1000
