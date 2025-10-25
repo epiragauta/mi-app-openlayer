@@ -76,13 +76,30 @@ const departamentosWMSLayer = new TileLayer({
     opacity: 0.7
 });
 
+// Capa de Municipios desde WMS (Capa 2)
+const municipiosWMSLayer = new TileLayer({
+    source: new TileWMS({
+        url: wmsUrl,
+        params: {
+            'LAYERS': '2',
+            'TILED': true,
+            'VERSION': '1.3.0'
+        },
+        serverType: 'geoserver',
+        crossOrigin: 'anonymous'
+    }),
+    visible: true,
+    opacity: 0.7
+});
+
 const map = new Map({
     target: 'map',
     layers: [
         new TileLayer({
             source: new OSM()
         }),
-        departamentosWMSLayer,        
+        departamentosWMSLayer,
+        municipiosWMSLayer,
         dptosLayer
     ],
     view: new View({
@@ -220,6 +237,10 @@ document.getElementById('btn-mi-ubicacion').addEventListener('click', () => {
 // Control de visibilidad de capas
 document.getElementById('check-departamentos-wms').addEventListener('change', (e) => {
     departamentosWMSLayer.setVisible(e.target.checked);
+});
+
+document.getElementById('check-municipios-wms').addEventListener('change', (e) => {
+    municipiosWMSLayer.setVisible(e.target.checked);
 });
 
 document.getElementById('check-departamentos-geojson').addEventListener('change', (e) => {
